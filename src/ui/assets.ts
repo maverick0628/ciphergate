@@ -11,6 +11,11 @@ const ALLOWLIST: Record<string, string> = {
   'index.html': 'text/html; charset=utf-8',
   'app.css': 'text/css; charset=utf-8',
   'app.js': 'text/javascript; charset=utf-8',
+  // The brand artwork, served as files rather than inlined as data URIs so the
+  // browser caches them and the CSS stays readable. Same-origin, so the
+  // no-external-requests rule holds.
+  'mark.png': 'image/png',
+  'lockup.png': 'image/png',
 };
 
 export interface Asset {

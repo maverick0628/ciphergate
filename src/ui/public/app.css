@@ -88,14 +88,25 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ── Mark ─────────────────────────────────────────────────────────────────── */
 
-.mark { display: block; width: 100%; height: 100%; }
-.mark-shield, .mark-split, .mark-dial { stroke: var(--dim); fill: none; }
-.mark-split { opacity: 0.55; }
-.mark-hinge { fill: var(--dim); }
-.mark-key { fill: var(--brand); }
+/*
+ * Brand artwork, served from /assets. Raster rather than SVG because the source
+ * is a rendered image with gradients and a glow that a monoline redraw loses.
+ * Both files are same-origin, so the no-external-requests rule still holds.
+ */
+.login-lockup {
+  display: block;
+  width: 280px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 1.5rem;
+}
 
-.login-mark { width: 52px; height: 52px; }
-.brand-mark { display: block; width: 28px; height: 28px; }
+.brand-mark {
+  display: block;
+  width: 30px;
+  height: auto;
+  flex: none;
+}
 
 /*
  * Wordmark. The reference artwork uses a wide geometric face; a webfont is out
@@ -144,6 +155,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .login-sub {
   margin: 0 0 2rem;
+  text-align: center;
   color: var(--faint);
   font-size: 0.9375rem;
 }
