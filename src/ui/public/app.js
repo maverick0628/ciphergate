@@ -42,15 +42,6 @@ function clear(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
 
-/** Stamp the inline SVG mark into every [data-mark] slot. */
-function renderMarks() {
-  const template = $('mark-template');
-  for (const slot of document.querySelectorAll('[data-mark]')) {
-    if (slot.firstChild) continue;
-    slot.appendChild(template.content.cloneNode(true));
-  }
-}
-
 let toastTimer;
 function toast(message, isError = false) {
   const node = $('toast');
@@ -899,7 +890,6 @@ async function refresh() {
 
 async function start(user) {
   showApp(user);
-  renderMarks();
   renderLegend();
   const consumerData = await api('/api/consumers');
   state.consumers = consumerData.consumers || [];
@@ -982,7 +972,6 @@ $('tag-filter').addEventListener('change', async (event) => {
 // ── Boot ────────────────────────────────────────────────────────────────────
 
 (async function boot() {
-  renderMarks();
   try {
     await start((await api('/api/session')).user);
   } catch {

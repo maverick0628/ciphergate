@@ -53,6 +53,19 @@ describe('UI assets', () => {
     }
   });
 
+  it('serves the brand artwork as intact PNG bytes', async () => {
+    ctx = await createCtx();
+    for (const name of ['mark.png', 'lockup.png']) {
+      const res = await ctx.app.inject({ method: 'GET', url: `/assets/${name}` });
+      expect(res.statusCode).toBe(200);
+      expect(res.headers['content-type']).toContain('image/png');
+      // The PNG signature, to prove the binary survived the read and the send
+      // rather than being mangled by a text encoding somewhere.
+      expect([...res.rawPayload.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+      expect(res.rawPayload.length).toBeGreaterThan(1000);
+    }
+  });
+
   it('404s an asset outside the allowlist', async () => {
     ctx = await createCtx();
     const res = await ctx.app.inject({ method: 'GET', url: '/assets/secrets.db' });

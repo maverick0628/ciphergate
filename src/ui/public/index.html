@@ -9,34 +9,11 @@
 </head>
 <body>
 
-<!--
-  The mark: a vault door set in a shield, split down the middle — steel on the
-  left, the lit keyhole on the right.
-
-  Drawn as inline SVG rather than embedding the raster artwork: this page is
-  served by the process holding every credential, on a network that may have no
-  route out, so the mark has to be self-contained, a few hundred bytes, and able
-  to inherit the theme's colours. The full-resolution artwork belongs in the
-  README and the favicon, where its weight costs nothing.
--->
-<template id="mark-template">
-  <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <path class="mark-shield" d="M16 2.6 27.2 7v9.2c0 6.7-4.7 10.8-11.2 12.9C9.5 27 4.8 22.9 4.8 16.2V7z"
-          stroke-width="1.9" stroke-linejoin="round" />
-    <path class="mark-split" d="M16 3.4v25" stroke-width="1.5" />
-    <circle class="mark-dial" cx="10.4" cy="15.4" r="3" stroke-width="1.5" />
-    <circle class="mark-hinge" cx="10.4" cy="15.4" r="0.85" />
-    <circle class="mark-key" cx="21.4" cy="14.2" r="2.15" />
-    <path class="mark-key" d="M20.6 15.9h1.6l.55 4.1h-2.7z" />
-  </svg>
-</template>
-
 <!-- ── Login ──────────────────────────────────────────────────────────────── -->
 <section id="login-view" class="login-view" hidden>
   <form id="login-form" class="login-card" autocomplete="off">
-    <div class="login-mark" data-mark></div>
-    <h1 class="wordmark"><span class="wm-a">Cipher</span><span class="wm-b">Gate</span></h1>
-    <p class="login-sub">Secrets gateway for agents. Every secret in this store is reachable from here.</p>
+    <img class="login-lockup" src="/assets/lockup.png" alt="CipherGate" width="280" height="221">
+    <p class="login-sub">Every secret in this store is reachable from here.</p>
 
     <label class="field">
       <span class="field-label">User</span>
@@ -57,7 +34,7 @@
 <section id="app-view" class="app-view" hidden>
   <header class="topbar">
     <div class="brand">
-      <span class="brand-mark" data-mark></span>
+      <img class="brand-mark" src="/assets/mark.png" alt="" width="30" height="31">
       <span class="brand-name wordmark"><span class="wm-a">Cipher</span><span class="wm-b">Gate</span></span>
     </div>
     <div class="topbar-right">
