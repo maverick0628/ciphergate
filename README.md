@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-22%2B-brightgreen)](package.json)
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%2B%20http-8A63D2)](docs/mcp-http-transport.md)
+[![Runtime dependencies](https://img.shields.io/badge/runtime%20deps-5-informational)](package.json)
 
 **A self-hosted secrets manager with one core and three surfaces — REST, CLI and
 MCP — plus a proxy that hands credentials to AI agents without ever letting them
