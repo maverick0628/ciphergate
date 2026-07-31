@@ -33,7 +33,7 @@ REST on `:8400`, browser UI on `:8405`. The UI serves only a setup page until yo
 run `gateway ui set-password`.
 
 ```bash
-npm test          # 500+ tests, ~7s
+npm test          # 469 tests, ~7s
 npm run build     # tsc, then copies the UI assets into dist
 ```
 

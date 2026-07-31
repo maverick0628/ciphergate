@@ -5,6 +5,20 @@ Why things are the way they are. Newest first.
 Operational entries about the private deployment this was extracted from have
 been left out. What remains is the reasoning that shaped the code.
 
+## The README states the real test count
+
+The Testing section claimed "500+ tests". `npm test` reports 469.
+
+That is a bad claim to round up in this particular README, which spends most of
+its length being careful about what CipherGate is not: no HA, no dynamic
+secrets, no PKI or SSO and a pointer to Vault or OpenBao for anyone who needs
+them. It is also the cheapest claim in the file to check. A reader who runs one
+command, finds the number padded and then re-reads the disclaimers has been
+given a reason to discount the part that is actually worth trusting.
+
+The number is now exact, in README and AGENTS.md both. It will drift low as
+tests are added, which is the safe direction for it to drift.
+
 ## Never gate authentication on a raw URL string
 
 A pre-landing review of the browser UI found an authentication bypass that every
