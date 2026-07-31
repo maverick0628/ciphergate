@@ -1,12 +1,24 @@
 # CipherGate
 
-Encrypted secret storage with one core and three surfaces — REST, CLI and MCP —
-plus a proxy that hands credentials to AI agents without ever letting them hold
-one.
+<img src="src/ui/public/lockup.png" alt="CipherGate" width="320">
+
+[![CI](https://github.com/maverick0628/ciphergate/actions/workflows/ci.yml/badge.svg)](https://github.com/maverick0628/ciphergate/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-22%2B-brightgreen)](package.json)
+[![MCP](https://img.shields.io/badge/MCP-stdio%20%2B%20http-8A63D2)](docs/mcp-http-transport.md)
+
+**A self-hosted secrets manager with one core and three surfaces — REST, CLI and
+MCP — plus a proxy that hands credentials to AI agents without ever letting them
+hold one.**
 
 Built for a single node you control. It replaces scattered `.env` files with a
-store where every secret is encrypted at rest, scoped to named consumers, and
-audit-logged on every read.
+store where every secret is AES-256-GCM encrypted at rest, scoped to named
+consumers, and audit-logged on every read. Self-hosted, Docker-deployable, SQLite
+underneath, no cloud dependency.
+
+If you have wired Claude Code, Cursor or another MCP client to real
+infrastructure, you have probably noticed your API keys sitting in plaintext in a
+JSON config file. That is the problem this exists to fix.
 
 > Published as a reference implementation, not a product. It is a single-node
 > store with no HA, clustering, dynamic secrets, PKI or SSO. If you need those,
@@ -29,6 +41,37 @@ the store, and it **never displays one**. No endpoint behind it returns plaintex
 yields metadata and eight characters. Editing tags or consumers cannot touch a
 stored value, because the write path is a genuine partial update rather than an
 upsert.
+
+## Who it is for
+
+Someone running services on hardware they own — a homelab, a VPS, a single
+production box — who has outgrown `.env` files but does not want to operate
+Vault. Particularly if some of those consumers are AI agents, because that is
+where the design does something other tools do not.
+
+If you need high availability, dynamic secrets, PKI or SSO, this is the wrong
+tool and the comparison below says so plainly.
+
+## How it compares
+
+| | CipherGate | Vault / OpenBao | Infisical / Doppler | `.env` files |
+|---|---|---|---|---|
+| Runs on your hardware | yes | yes | self-host tier | yes |
+| Operational weight | one container | unsealing, HA, policies | SaaS account | none |
+| Encrypted at rest | AES-256-GCM | yes | yes | **no** |
+| Per-consumer scoping | yes | yes | yes | no |
+| Audit log | every read | yes | yes | no |
+| MCP server built in | **yes** | no | no | — |
+| Policy enforcement for agents | **yes** | no | no | — |
+| High availability | **no** | yes | yes | — |
+| Dynamic secrets, PKI, SSO | **no** | yes | partial | — |
+
+The honest summary: Vault and OpenBao are more capable and considerably more
+work. Infisical and Doppler are easier but put your secrets on someone else's
+infrastructure. CipherGate sits in the gap — one container, no cloud account,
+and a codebase small enough to actually read.
+
+The MCP and agent-policy rows are the ones without a real competitor today.
 
 ## Architecture
 
