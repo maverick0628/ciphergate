@@ -1,0 +1,54 @@
+services:
+  ciphergate:
+    image: ciphergate:latest
+    container_name: ciphergate
+    restart: unless-stopped
+    ports:
+      - "8400:8400"
+      # Browser UI. Serves HTTPS with a self-signed cert generated into /data on
+      # first start. Set GATEWAY_UI_ENABLED=false to not run it at all.
+      - "8405:8405"
+    volumes:
+      - ./data:/data
+    environment:
+      - GATEWAY_DB_PATH=/data/gateway.db
+      - GATEWAY_KEYFILE=/data/gateway.key
+      - GATEWAY_PORT=8400
+      - GATEWAY_CACHE_TTL=300
+      - GATEWAY_UI_ENABLED=true
+      - GATEWAY_UI_PORT=8405
+      # Pushover audit alerts — tokens injected as env at deploy time
+      - GATEWAY_PUSHOVER_ENABLED=true
+      - PUSHOVER_APP_TOKEN=${PUSHOVER_APP_TOKEN}
+      - PUSHOVER_USER_KEY=${PUSHOVER_USER_KEY}
+      - GATEWAY_LOG_LEVEL=info
+      # Audit alert thresholds — see docs/pushover-alerts.md
+      - GATEWAY_ALERT_AUTH_FAILURE=true
+      - GATEWAY_ALERT_DELETE=true
+      - GATEWAY_ALERT_UPDATE=true
+      - GATEWAY_ALERT_ROTATION_WARNING=true
+      - GATEWAY_ALERT_MIN_SEVERITY=default
+
+  ciphergate-backup:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile.backup
+    container_name: ciphergate-backup
+    restart: unless-stopped
+    depends_on:
+      - ciphergate
+    volumes:
+      # Read-only access to the gateway's data directory
+      - ./data:/data:ro
+      # Backups stored in a separate ZFS dataset with its own snapshot schedule
+      - ./backups:/backups
+    environment:
+      - DB_PATH=/data/gateway.db
+      - BACKUP_ROOT=/backups
+      # Pushover backup alerts — tokens injected as env at deploy time
+      - PUSHOVER_APP_TOKEN=${PUSHOVER_APP_TOKEN}
+      - PUSHOVER_USER_KEY=${PUSHOVER_USER_KEY}
+      # Set PUSHOVER_ON_SUCCESS=1 for verbose success notifications (noisy)
+      # - PUSHOVER_ON_SUCCESS=1
+      - TZ=America/New_York
+

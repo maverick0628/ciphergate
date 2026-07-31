@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+#
+# mcp-wrap — fetch named secrets from ciphergate and exec a command with
+# them injected as environment variables. A gateway-backed drop-in for the
+# common "wrap an MCP server so it never stores its own keys" pattern.
+#
+# Usage:
+#   mcp-wrap NAME1[,NAME2,...] <command> [args...]
+#
+# Example (in a Claude Code MCP server definition):
+#   mcp-wrap LETTA_SERVER_PASSWORD npx -y letta-mcp-server
+#   mcp-wrap N8N_API_KEY n8n-mcp
+#   mcp-wrap BOOKSTACK_API_TOKEN,BOOKSTACK_BASE_URL bookstack-mcp-server
+#
+# Each NAME is fetched from the gateway and exported under the SAME name, then
+# the command is exec'd. The gateway audit-logs every read (and can Pushover
+# alert), so ciphergate becomes the single source of truth — no keys in
+# shell configs, dotenvs, or the MCP definitions themselves.
+#
+# Required environment:
+#   GATEWAY_URL            e.g. http://gateway-host:8400
+#   GATEWAY_CONSUMER_KEY   a consumer API key scoped to the requested secrets
+#
+# Requires: curl and node on PATH (node is used only for safe JSON handling).
+set -euo pipefail
+
+if [ "$#" -lt 2 ]; then
+  echo "usage: mcp-wrap NAME1[,NAME2,...] <command> [args...]" >&2
+  exit 2
+fi
+
+names="$1"; shift
+: "${GATEWAY_URL:?mcp-wrap: GATEWAY_URL is not set}"
+: "${GATEWAY_CONSUMER_KEY:?mcp-wrap: GATEWAY_CONSUMER_KEY is not set}"
+
+command -v curl >/dev/null 2>&1 || { echo "mcp-wrap: curl not found" >&2; exit 127; }
+command -v node >/dev/null 2>&1 || { echo "mcp-wrap: node not found" >&2; exit 127; }
+
+# Build a JSON array body from the comma-separated names.
+names_json="$(printf '%s' "$names" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>process.stdout.write(JSON.stringify(d.trim().split(",").map(s=>s.trim()).filter(Boolean))))')"
+
+resp="$(curl -fsS -X POST "${GATEWAY_URL%/}/v1/secrets/batch" \
+  -H "Authorization: Bearer ${GATEWAY_CONSUMER_KEY}" \
+  -H 'Content-Type: application/json' \
+  -d "{\"names\":${names_json}}")" || { echo "mcp-wrap: gateway request failed" >&2; exit 1; }
+
+# Parse the batch response. Fail closed on any missing/denied secret, and emit
+# shell-safe `export NAME='value'` lines (single-quote escaped) for eval.
+exports="$(printf '%s' "$resp" | node -e '
+let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{
+  let j; try { j = JSON.parse(d); } catch { console.error("mcp-wrap: invalid gateway response"); process.exit(1); }
+  const missing = j.missing || [], denied = j.denied || [];
+  if (missing.length || denied.length) {
+    console.error("mcp-wrap: cannot inject all secrets — " +
+      (denied.length ? "denied: " + denied.join(", ") + "; " : "") +
+      (missing.length ? "missing: " + missing.join(", ") : ""));
+    process.exit(1);
+  }
+  const esc = v => "\x27" + String(v).replace(/\x27/g, "\x27\\\x27\x27") + "\x27";
+  for (const s of (j.secrets || [])) process.stdout.write("export " + s.name + "=" + esc(s.value) + "\n");
+})')" || exit 1
+
+eval "$exports"
+exec "$@"

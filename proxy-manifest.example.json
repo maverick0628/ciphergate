@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "gatewayUrl": "http://gateway-host:8400",
+  "consumerKeyEnv": "GATEWAY_PROXY_KEY",
+  "servers": {
+    "qdrant": {
+      "command": "uvx",
+      "args": ["mcp-server-qdrant"],
+      "secrets": {
+        "QDRANT_API_KEY": "QDRANT_API_KEY"
+      },
+      "env": {
+        "QDRANT_URL": "http://gateway-host:6333",
+        "COLLECTION_NAME": "claude-memory"
+      },
+      "policy": {
+        "allowTools": ["qdrant-store", "qdrant-find"],
+        "redactPatterns": ["sk-[A-Za-z0-9]{8,}", "sg_live_[A-Za-z0-9]+"]
+      }
+    },
+    "n8n": {
+      "command": "npx",
+      "args": ["-y", "n8n-mcp"],
+      "secrets": {
+        "N8N_API_KEY": "N8N_API_KEY"
+      },
+      "env": {
+        "N8N_API_URL": "http://gateway-host:5678",
+        "MCP_MODE": "stdio"
+      }
+    },
+    "letta": {
+      "command": "letta-mcp",
+      "args": [],
+      "secrets": {
+        "LETTA_SERVER_PASSWORD": "LETTA_SERVER_PASSWORD"
+      },
+      "env": {
+        "LETTA_BASE_URL": "http://gateway-host:8283"
+      },
+      "policy": {
+        "allowTools": [
+          "letta_list_agents",
+          "letta_get_agent",
+          "letta_send_message",
+          "letta_list_messages",
+          "letta_get_core_memory",
+          "letta_search_archival",
+          "letta_insert_archival"
+        ]
+      }
+    },
+    "home-assistant": {
+      "command": "uvx",
+      "args": ["hass-mcp"],
+      "secrets": {
+        "HASS_TOKEN": "HASS_TOKEN"
+      },
+      "env": {
+        "HASS_URL": "http://gateway-host:8123"
+      }
+    },
+    "coinbase": {
+      "command": "REPLACE_WITH_YOUR_COINBASE_MCP_LAUNCH_COMMAND",
+      "args": [],
+      "secrets": {
+        "COINBASE_API_KEY": "COINBASE_API_KEY",
+        "COINBASE_API_SECRET": "COINBASE_API_SECRET"
+      },
+      "policyFile": "policies/coinbase.policy.json"
+    },
+    "robinhood-trading": {
+      "transport": "http",
+      "url": "https://agent.robinhood.com/mcp/trading",
+      "policyFile": "policies/robinhood-trading.policy.json"
+    }
+  }
+}

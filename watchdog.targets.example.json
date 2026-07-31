@@ -1,0 +1,31 @@
+[
+  {
+    "name": "gateway-rest",
+    "kind": "http",
+    "url": "http://gateway-host:8400/health",
+    "expect": { "status": 200 }
+  },
+  {
+    "name": "qdrant",
+    "kind": "http",
+    "url": "http://vector-host:6333/healthz",
+    "expect": { "status": 200 }
+  },
+  {
+    "name": "llm-server",
+    "kind": "http",
+    "url": "http://llm-host:1234/v1/models",
+    "expect": { "status": 200, "minModels": 1 }
+  },
+  {
+    "name": "some-tcp-service",
+    "kind": "tcp",
+    "url": "tcp://gateway-host:8402"
+  },
+  {
+    "name": "public-edge",
+    "kind": "access",
+    "url": "https://service.example.com/health",
+    "expect": { "status": 200 }
+  }
+]

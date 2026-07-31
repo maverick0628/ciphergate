@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      # The image build has a restricted context — only the files the Dockerfile
+      # copies. A build step that works locally and in the job above can still
+      # fail here, which is exactly what happened when `npm run build` gained a
+      # dependency on scripts/ that the Dockerfile did not copy. Building the
+      # image is the only thing that catches that class of error.
+      - name: Build the Docker image
+        run: docker build -t ciphergate:ci .
+
+      - name: Verify the image ships what it needs
+        run: |
+          set -euo pipefail
+          # The UI assets are copied by a build script rather than emitted by
+          # tsc, so assert they actually landed in the image.
+          for f in index.html app.css app.js; do
+            docker run --rm --entrypoint sh ciphergate:ci \
+              -c "test -s /opt/ciphergate/ui/public/$f" \
+              || { echo "missing UI asset in image: $f"; exit 1; }
+          done
+          # openssl generates the UI's self-signed certificate on first start.
+          docker run --rm --entrypoint sh ciphergate:ci -c "command -v openssl >/dev/null"
+          # The CLI must expose the UI bootstrap command.
+          docker run --rm --entrypoint sh ciphergate:ci \
+            -c "node /opt/ciphergate/cli.js ui --help" | grep -q set-password

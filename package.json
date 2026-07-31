@@ -1,0 +1,52 @@
+{
+  "name": "ciphergate",
+  "version": "1.4.0",
+  "description": "Encrypted secret storage with a unified REST, CLI and MCP surface, and a policy-enforcing proxy for AI agents",
+  "type": "module",
+  "main": "dist/server.js",
+  "bin": {
+    "gateway": "dist/cli.js",
+    "gateway-proxy": "dist/proxy-cli.js",
+    "gateway-watchdog": "dist/watchdog-cli.js",
+    "gateway-backup": "dist/backup-cli.js"
+  },
+  "scripts": {
+    "build": "tsc && node scripts/copy-ui-assets.mjs",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "mcp": "node dist/mcp-server.js",
+    "mcp:http": "MCP_TRANSPORT=http node dist/mcp-server.js",
+    "audit-mcp": "node scripts/mcp-wrap-audit.mjs",
+    "proxy": "node dist/proxy-cli.js",
+    "watchdog": "node dist/watchdog-cli.js",
+    "backup": "node dist/backup-cli.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "argon2": "^0.44.0",
+    "better-sqlite3": "^12.8.0",
+    "commander": "^14.0.3",
+    "fastify": "^5.8.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.5.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.5"
+  },
+  "overrides": {
+    "hono": "^4.12.21",
+    "@hono/node-server": "^1.19.13",
+    "fast-uri": "^3.1.2",
+    "ip-address": "^10.1.1",
+    "qs": "^6.15.2",
+    "esbuild": "^0.28.1",
+    "vite": "^8.0.16"
+  }
+}

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>CipherGate</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+
+<!--
+  The mark: a vault door set in a shield, split down the middle — steel on the
+  left, the lit keyhole on the right.
+
+  Drawn as inline SVG rather than embedding the raster artwork: this page is
+  served by the process holding every credential, on a network that may have no
+  route out, so the mark has to be self-contained, a few hundred bytes, and able
+  to inherit the theme's colours. The full-resolution artwork belongs in the
+  README and the favicon, where its weight costs nothing.
+-->
+<template id="mark-template">
+  <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <path class="mark-shield" d="M16 2.6 27.2 7v9.2c0 6.7-4.7 10.8-11.2 12.9C9.5 27 4.8 22.9 4.8 16.2V7z"
+          stroke-width="1.9" stroke-linejoin="round" />
+    <path class="mark-split" d="M16 3.4v25" stroke-width="1.5" />
+    <circle class="mark-dial" cx="10.4" cy="15.4" r="3" stroke-width="1.5" />
+    <circle class="mark-hinge" cx="10.4" cy="15.4" r="0.85" />
+    <circle class="mark-key" cx="21.4" cy="14.2" r="2.15" />
+    <path class="mark-key" d="M20.6 15.9h1.6l.55 4.1h-2.7z" />
+  </svg>
+</template>
+
+<!-- ── Login ──────────────────────────────────────────────────────────────── -->
+<section id="login-view" class="login-view" hidden>
+  <form id="login-form" class="login-card" autocomplete="off">
+    <div class="login-mark" data-mark></div>
+    <h1 class="wordmark"><span class="wm-a">Cipher</span><span class="wm-b">Gate</span></h1>
+    <p class="login-sub">Secrets gateway for agents. Every secret in this store is reachable from here.</p>
+
+    <label class="field">
+      <span class="field-label">User</span>
+      <input id="login-user" type="text" value="admin" autocomplete="username" spellcheck="false" required>
+    </label>
+
+    <label class="field">
+      <span class="field-label">Password</span>
+      <input id="login-password" type="password" autocomplete="current-password" required>
+    </label>
+
+    <button type="submit" class="btn btn-primary btn-block">Unlock</button>
+    <p id="login-error" class="error-line" role="alert" hidden></p>
+  </form>
+</section>
+
+<!-- ── App ────────────────────────────────────────────────────────────────── -->
+<section id="app-view" class="app-view" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" data-mark></span>
+      <span class="brand-name wordmark"><span class="wm-a">Cipher</span><span class="wm-b">Gate</span></span>
+    </div>
+    <div class="topbar-right">
+      <button id="console-btn" class="btn btn-ghost">Console</button>
+      <span id="session-user" class="session-user"></span>
+      <button id="logout-btn" class="btn btn-ghost">Sign out</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-controls">
+        <button id="new-btn" class="btn btn-primary btn-block">New secret</button>
+        <input id="search" type="search" class="search" placeholder="Search secrets" spellcheck="false" autocomplete="off">
+        <select id="tag-filter" class="select" aria-label="Filter by tag">
+          <option value="">All tags</option>
+        </select>
+      </div>
+      <div class="list-meta">
+        <span id="list-count" class="list-count"></span>
+        <span id="rotation-legend" class="rotation-legend"></span>
+      </div>
+      <ul id="secret-list" class="secret-list"></ul>
+    </aside>
+
+    <div id="detail" class="detail">
+      <div id="empty-state" class="empty-state">
+        <p>Select a secret to view it, or create a new one.</p>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- ── Console ────────────────────────────────────────────────────────────── -->
+<div id="console-overlay" class="overlay" hidden>
+  <div class="console-panel" role="dialog" aria-modal="true" aria-labelledby="console-title">
+    <header class="console-head">
+      <div>
+        <h2 id="console-title">Console</h2>
+        <p class="console-sub">
+          Operations this interface deliberately doesn't perform. Run them on the
+          gateway host.
+        </p>
+      </div>
+      <button id="console-close" class="btn btn-ghost" aria-label="Close">Close</button>
+    </header>
+    <div id="console-body" class="console-body"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="/assets/app.js" defer></script>
+</body>
+</html>

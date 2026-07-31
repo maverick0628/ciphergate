@@ -1,0 +1,30 @@
+# Auto-detect text files and normalize line endings to LF on commit and checkout.
+* text=auto eol=lf
+
+# TypeScript / Node
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Shell scripts must be LF
+*.sh text eol=lf
+
+# Docker
+Dockerfile* text eol=lf
+.dockerignore text eol=lf
+
+# Binaries — never normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary

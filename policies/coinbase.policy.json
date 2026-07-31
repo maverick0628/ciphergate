@@ -1,0 +1,26 @@
+{
+  "_comment": "Guard policy for the coinbase MCP server. Allowlist model = default-deny: only the read/quote/list/preview tools below are exposed and callable; every money-moving tool (orders_create/edit/cancel/close_position, convert_execute, transfer, portfolios_create/edit/delete, set_env) is denied by omission and a new tool stays denied until added here. redactPatterns scrub API keys and balance figures from allowed responses.",
+  "allowTools": [
+    "coinbase_products_list",
+    "coinbase_products_get",
+    "coinbase_products_ticker",
+    "coinbase_products_book",
+    "coinbase_products_candles",
+    "coinbase_products_best_bid_ask",
+    "coinbase_orders_list",
+    "coinbase_orders_get",
+    "coinbase_orders_fills",
+    "coinbase_orders_preview",
+    "coinbase_convert_quote",
+    "coinbase_convert_get",
+    "coinbase_portfolios_list",
+    "coinbase_portfolios_get",
+    "coinbase_fees",
+    "coinbase_help",
+    "coinbase_balance"
+  ],
+  "redactPatterns": [
+    "(?i)\"(?:api[_-]?key|api[_-]?secret|api[_-]?passphrase|passphrase|private[_-]?key|secret)\"\\s*:\\s*\"[^\"]*\"",
+    "(?i)\"(?:available_balance|total_balance|hold|balance)\"\\s*:\\s*\\{[^}]*\\}"
+  ]
+}

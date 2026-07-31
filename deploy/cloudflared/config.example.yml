@@ -1,0 +1,21 @@
+# Example cloudflared ingress config (credentials-file style).
+#
+# This is an ALTERNATIVE to the token-based tunnel in
+# docker-compose.connector.yml — use it if you run cloudflared with a named
+# tunnel + credentials file instead of TUNNEL_TOKEN.
+#
+# Put a Cloudflare Access application on `secrets-mcp.example.com` so the
+# endpoint is only reachable by authorized identities / service tokens.
+# Cloudflare terminates auth before traffic ever reaches the MCP container.
+
+tunnel: ciphergate
+credentials-file: /etc/cloudflared/ciphergate.json
+
+ingress:
+  # Streamable-http MCP transport (the remote connector surface).
+  - hostname: secrets-mcp.example.com
+    service: http://ciphergate-mcp:8401
+  # Optional: expose the REST API too (lock this down hard with Access).
+  # - hostname: secrets-api.example.com
+  #   service: http://ciphergate:8400
+  - service: http_status:404

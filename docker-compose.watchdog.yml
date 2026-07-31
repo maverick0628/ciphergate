@@ -1,0 +1,99 @@
+# Homelab health watchdog — probes the homelab MCP servers, tunnels, and core
+# dependencies and alerts on state transition (Pushover; ntfy optional/dormant),
+# recording incidents/recoveries in the overseer Qdrant collections.
+#
+# Ships inside the ciphergate image (the `gateway-watchdog` bin), so this
+# just runs that image with the watchdog entrypoint in `watch` mode. Run it on
+# a host (llm-host) that can reach the model server + Qdrant locally
+# and the gateway host over the LAN, plus any public edge for the
+# `access` probes.
+#
+# Secrets are injected as env at deploy time — never committed. The Cloudflare
+# Access service token is a managed gateway secret (read it with a scoped
+# consumer); the Pushover token/user are deploy env, same as the main gateway:
+#   export CF_ACCESS_CLIENT_ID=$(gateway secret get CF_ACCESS_CLIENT_ID)
+#   export CF_ACCESS_CLIENT_SECRET=$(gateway secret get CF_ACCESS_CLIENT_SECRET)
+#   export PUSHOVER_TOKEN=$(gateway secret get PUSHOVER_APP_TOKEN)
+#   export PUSHOVER_USER=$(gateway secret get PUSHOVER_USER_KEY)
+#
+# Compose interpolates env from the deploying shell, and unset vars fall back to
+# the defaults below — so export the FULL set (CF_ACCESS_*, PUSHOVER_*, plus any
+# QDRANT_API_KEY/EMBED_API_KEY/NTFY_URL you rely on) in one shell, or a plain
+# `up -d` will wipe them back to default. ntfy is retired (NTFY_URL empty); leave
+# it unset to keep the ntfy sink dormant.
+#
+# The target inventory lives in `deploy-config/watchdog.targets.json` (gitignored
+# — it names live hosts). Copy `watchdog.targets.example.json` there on a new
+# host; a missing file now fails loudly rather than silently probing the
+# placeholder inventory baked into the image.
+#
+# Usage:
+#   docker compose -f docker-compose.watchdog.yml up -d
+services:
+  gateway-watchdog:
+    # No `build:` here, deliberately. These variants share
+    # `ciphergate:latest` with the gateway itself, so a `build` stanza makes
+    # `up --build` recompile from whatever source happens to sit in this
+    # directory and retag the SHARED image. On the build host that directory is
+    # a deployment snapshot with no GitHub access, so it drifts — on 2026-07-27 it
+    # was seven commits behind, and rebuilding from it would have silently
+    # reverted the gateway's CLI to a version that could destroy a secret.
+    #
+    # Build the image once, deliberately, then bring these up against it.
+    image: ciphergate:latest
+    container_name: gateway-watchdog
+    restart: unless-stopped
+    command: ["node", "watchdog-cli.js", "watch"]
+    environment:
+      - WATCHDOG_TARGETS=${WATCHDOG_TARGETS:-/opt/gateway-config/watchdog.targets.json}
+      - WATCHDOG_STATE=${WATCHDOG_STATE:-/data/watchdog-state.json}
+      - WATCHDOG_INTERVAL=${WATCHDOG_INTERVAL:-60}
+      - WATCHDOG_FAIL_THRESHOLD=${WATCHDOG_FAIL_THRESHOLD:-2}
+      # Incident/outcome store + embeddings. Optional.
+      - QDRANT_URL=${QDRANT_URL:-http://vector-host:6333}
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - EMBED_URL=${EMBED_URL:-http://llm-host:1234/v1}
+      - EMBED_MODEL=${EMBED_MODEL:-text-embedding-nomic-embed-text-v2}
+      - EMBED_API_KEY=${EMBED_API_KEY:-}
+      # Alert channels — Pushover token/user from the gateway. ntfy is optional
+      # and retired homelab-wide (2026-06-22); leave NTFY_URL empty to skip it.
+      - PUSHOVER_TOKEN=${PUSHOVER_TOKEN:-}
+      - PUSHOVER_USER=${PUSHOVER_USER:-}
+      - NTFY_URL=${NTFY_URL:-}
+      # Cloudflare Access service token for the `access` (edge→origin) probes.
+      - CF_ACCESS_CLIENT_ID=${CF_ACCESS_CLIENT_ID:-}
+      - CF_ACCESS_CLIENT_SECRET=${CF_ACCESS_CLIENT_SECRET:-}
+    volumes:
+      # State (transition memory) on a named volume so restarts don't re-alert.
+      - watchdog-state:/data
+      # The inventory, bind-mounted so it's editable without a rebuild.
+      #
+      # A DIRECTORY, deliberately — never `./watchdog.targets.json:<file>`.
+      # Docker binds a single file by inode. `watchdog.targets.json` is
+      # gitignored, so any checkout that deletes and recreates it (PR #40 did
+      # exactly that) leaves the container bound to the old, unlinked inode: the
+      # host path still looks right, `docker inspect` still looks right, and the
+      # watchdog goes blind with ENOENT until someone restarts it. Losing the
+      # watchdog quietly is the worst failure here — it is what alerts on
+      # everything else. Directory mounts resolve per-lookup and don't detach.
+      #
+      # Mounted at /opt/gateway-config, NOT over /opt/ciphergate: that path
+      # holds the app itself, and the repo root holds `.env`.
+      - ./deploy-config:/opt/gateway-config:ro
+    healthcheck:
+      # Healthy if the state file has been written within the last 5 minutes —
+      # i.e. the watch loop is still sweeping.
+      test: ["CMD", "node", "-e", "import('node:fs').then(fs=>{const s=fs.statSync(process.env.WATCHDOG_STATE||'/data/watchdog-state.json');process.exit(Date.now()-s.mtimeMs<300000?0:1)}).catch(()=>process.exit(1))"]
+      interval: 60s
+      timeout: 5s
+      start_period: 90s
+      retries: 3
+    networks:
+      - homelab
+
+volumes:
+  watchdog-state:
+
+networks:
+  homelab:
+    external: true

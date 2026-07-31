@@ -1,0 +1,29 @@
+# Minimal backup container: alpine + sqlite3 + curl + supercronic
+# supercronic is a cron replacement suitable for containers (handles signals, logs to stdout)
+FROM alpine:3.20
+
+RUN apk add --no-cache \
+    sqlite \
+    curl \
+    tzdata \
+    ca-certificates \
+  && update-ca-certificates
+
+# Install supercronic (cron-for-containers)
+ARG SUPERCRONIC_VERSION=v0.2.29
+ARG SUPERCRONIC_SHA1SUM=cd48d45c4b10f3f0bfdd3a57d054cd05ac96812b
+RUN curl -fsSLO "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/supercronic-linux-amd64" \
+  && echo "${SUPERCRONIC_SHA1SUM}  supercronic-linux-amd64" | sha1sum -c - \
+  && chmod +x supercronic-linux-amd64 \
+  && mv supercronic-linux-amd64 /usr/local/bin/supercronic
+
+WORKDIR /app
+COPY backup.sh /app/backup.sh
+RUN chmod +x /app/backup.sh
+
+# Crontab: run backup every day at 03:00 UTC
+# Format: minute hour day month dow command
+RUN echo "0 3 * * * /app/backup.sh" > /app/crontab
+
+# Run supercronic in foreground so container stays alive
+CMD ["supercronic", "/app/crontab"]

@@ -1,0 +1,25 @@
+node_modules/
+dist/
+*.db
+*.key
+.env
+.DS_Store
+coverage/
+.letta/
+
+# Claude Code local-only settings (per-machine, not shared)
+.claude/settings.local.json
+
+# Live deployment config — real hosts, ports and public hostnames.
+# Track only the .example.json variants.
+proxy-manifest.json
+watchdog.targets.json
+
+# Per-host deploy config, bind-mounted into the watchdog as a DIRECTORY.
+# The dir itself must survive a clean checkout or the mount creates an empty
+# one — hence the tracked .gitkeep. See docker-compose.watchdog.yml.
+deploy-config/*
+!deploy-config/.gitkeep
+
+# Per-session working plan (local working doc, not shared).
+PLAN.md

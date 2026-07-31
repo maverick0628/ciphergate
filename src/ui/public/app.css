@@ -1,0 +1,754 @@
+/*
+ * CipherGate UI.
+ *
+ * Three rules hold the design together:
+ *
+ *   1. Monospace is for machine identifiers — names, masks, versions, actors.
+ *      Sans is for prose a human wrote. The split is never decorative.
+ *   2. Amber appears only where a stored value is at risk. Rotation overdue, the
+ *      rotate compartment, destructive confirmation. Nothing else earns it, so
+ *      its presence always means the same thing.
+ *   3. A green dot means the gateway checked and it was fine. "No policy" gets
+ *      its own hollow state, because most secrets have no policy and colouring
+ *      them green is reassurance the gateway has not earned.
+ *
+ * No downloaded fonts: this page is served by the process holding every
+ * credential, on a network that may have no route out. A webfont request would
+ * be both a phone-home and a hard dependency on the internet.
+ */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0b0d10;
+  --panel: #0f1216;
+  --elev: #14181e;
+  --raised: #1a1f26;
+
+  --line: #232a33;
+  --line-soft: #191e25;
+
+  --text: #e7eaee;
+  --dim: #949ca8;
+  --faint: #626b78;
+
+  /*
+   * Two accents, and they do different jobs.
+   *
+   * --brand is identity: the mark's keyhole and the second half of the
+   * wordmark. One line to rebrand.
+   *
+   * --accent is amber and is *semantic*: it appears only where a stored value
+   * is at risk — rotation overdue, the rotate compartment. Keeping the two
+   * separate is what lets the amber rule keep meaning something.
+   */
+  --brand: #e02a2a;
+
+  --accent: #d4a53c;
+  --accent-soft: rgba(212, 165, 60, 0.12);
+  --accent-line: rgba(212, 165, 60, 0.32);
+
+  --ok: #5b9e78;
+  --warn: #cf9245;
+  --danger: #cc6a63;
+
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo,
+          Consolas, "Liberation Mono", monospace;
+
+  --r: 8px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.65 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  background-image: linear-gradient(180deg, #0d1015 0%, var(--bg) 420px);
+  background-repeat: no-repeat;
+}
+
+[hidden] { display: none !important; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+::placeholder { color: var(--faint); }
+::selection { background: var(--accent-soft); }
+
+:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
+/* ── Mark ─────────────────────────────────────────────────────────────────── */
+
+.mark { display: block; width: 100%; height: 100%; }
+.mark-shield, .mark-split, .mark-dial { stroke: var(--dim); fill: none; }
+.mark-split { opacity: 0.55; }
+.mark-hinge { fill: var(--dim); }
+.mark-key { fill: var(--brand); }
+
+.login-mark { width: 52px; height: 52px; }
+.brand-mark { display: block; width: 28px; height: 28px; }
+
+/*
+ * Wordmark. The reference artwork uses a wide geometric face; a webfont is out
+ * (no external requests on this page, ever), so the character comes from caps,
+ * heavy tracking and the two-tone split instead.
+ */
+.wordmark {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+}
+
+.wm-a { color: var(--text); }
+.wm-b { color: var(--brand); }
+
+/* ── Login ────────────────────────────────────────────────────────────────── */
+
+.login-view {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 26rem;
+  padding: 2.5rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  animation: rise 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.login-card h1 {
+  margin: 1.5rem 0 0.375rem;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.login-sub {
+  margin: 0 0 2rem;
+  color: var(--faint);
+  font-size: 0.9375rem;
+}
+
+/* ── Fields ───────────────────────────────────────────────────────────────── */
+
+.field { display: block; margin-bottom: 1.25rem; }
+
+.field-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.field-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--faint);
+}
+
+.field-hint code {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--dim);
+}
+
+input[type="text"],
+input[type="search"],
+input[type="password"],
+input[type="number"],
+textarea,
+.select {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+input:hover, textarea:hover, .select:hover { border-color: #2e3742; }
+
+input:focus, textarea:focus, .select:focus {
+  border-color: var(--accent-line);
+  outline: none;
+  background: var(--panel);
+}
+
+textarea { resize: vertical; min-height: 5.5rem; }
+
+.select { appearance: none; cursor: pointer; padding-right: 2rem; }
+
+input[type="search"] { -webkit-appearance: none; }
+
+.mono-input { font-family: var(--mono); font-size: 0.9375rem; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.1rem;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.btn:hover { background: #212832; border-color: #2e3742; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-block { width: 100%; padding: 0.7rem; }
+.btn-sm { padding: 0.4rem 0.75rem; font-size: 0.875rem; }
+
+.btn-primary {
+  background: var(--text);
+  border-color: var(--text);
+  color: #0b0d10;
+  font-weight: 600;
+}
+.btn-primary:hover { background: #fff; border-color: #fff; }
+
+.btn-ghost { background: transparent; }
+.btn-ghost:hover { background: var(--raised); }
+
+.btn-accent {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+.btn-accent:hover { background: rgba(212, 165, 60, 0.2); }
+
+/* ── Top bar ──────────────────────────────────────────────────────────────── */
+
+.app-view { min-height: 100vh; display: flex; flex-direction: column; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.brand { display: flex; align-items: center; gap: 0.7rem; }
+
+.brand-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 0.85rem; }
+
+.session-user {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  color: var(--faint);
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(19rem, 24rem) 1fr;
+  min-height: 0;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+  min-height: 0;
+}
+
+.sidebar-controls {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.1rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.list-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 1.1rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.list-count {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.rotation-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--faint);
+}
+
+.rotation-legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
+
+.secret-list {
+  flex: 1;
+  margin: 0;
+  padding: 0.5rem;
+  list-style: none;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.secret-item {
+  padding: 0.65rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.secret-item:hover { background: var(--elev); }
+
+.secret-item.is-active {
+  background: var(--elev);
+  border-color: var(--line);
+}
+
+.secret-item-top { display: flex; align-items: center; gap: 0.6rem; }
+
+.secret-name {
+  font-family: var(--mono);
+  font-size: 0.9375rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.secret-item-tags {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/*
+ * Rotation dots. `none` is hollow on purpose: the gateway is not checking that
+ * secret, and a filled dot of any colour would imply it is.
+ */
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.dot.none { background: transparent; box-shadow: inset 0 0 0 1.5px var(--faint); }
+.dot.due_soon { background: var(--warn); }
+.dot.overdue { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.chip {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--dim);
+}
+
+.empty-list {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--faint);
+  font-size: 0.9375rem;
+}
+
+/* ── Detail ───────────────────────────────────────────────────────────────── */
+
+.detail { overflow-y: auto; min-height: 0; }
+
+.empty-state {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  font-size: 1rem;
+}
+
+.detail-inner {
+  max-width: 50rem;
+  padding: 2rem 2.5rem 5rem;
+  animation: fade 0.25s ease both;
+}
+
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+.detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 2rem;
+}
+
+.detail-title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  word-break: break-all;
+}
+
+/* Buttons in the panel header. `flex: none` so the title can never squeeze them
+   narrow enough to wrap their labels. */
+.detail-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.detail-facts {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  color: var(--faint);
+}
+
+.fact strong { color: var(--dim); font-weight: 500; }
+
+.section { margin-bottom: 2rem; }
+
+.section-title {
+  margin: 0 0 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* Read-only rendering of a field. */
+.readonly-text {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.readonly-empty { color: var(--faint); font-style: italic; }
+
+.readonly-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+.readonly-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* Masked preview — the only place a value is ever represented. */
+.mask {
+  display: inline-block;
+  padding: 0.55rem 0.9rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 1rem;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+}
+
+.consumer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.3rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 0.9375rem;
+  color: var(--dim);
+}
+
+.check:hover { background: var(--elev); color: var(--text); }
+.check input { width: auto; margin: 0; accent-color: var(--accent); cursor: pointer; }
+
+/*
+ * The rotate compartment. Every other control is flat and calm. This one is
+ * bordered, warm and shut by default — the only thing here that can destroy a
+ * working credential should not look like the tag field.
+ */
+.rotate {
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r);
+  background: var(--accent-soft);
+  overflow: hidden;
+}
+
+.rotate-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rotate-toggle:hover { background: rgba(212, 165, 60, 0.08); }
+
+.rotate-caret { transition: transform 0.2s; font-size: 0.8rem; }
+.rotate.is-open .rotate-caret { transform: rotate(90deg); }
+
+.rotate-body {
+  padding: 1.1rem;
+  border-top: 1px solid var(--accent-line);
+}
+
+.value-row { display: flex; gap: 0.6rem; }
+.value-row input { flex: 1; }
+
+/* ── History ──────────────────────────────────────────────────────────────── */
+
+.history {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 0.875rem;
+}
+
+.history th {
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--faint);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.history td {
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--dim);
+}
+
+.history tr:last-child td { border-bottom: 0; }
+
+.history-empty { color: var(--faint); font-size: 0.9375rem; margin: 0; }
+
+/* ── Actions ──────────────────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.error-line {
+  margin: 0.85rem 0 0;
+  color: var(--danger);
+  font-size: 0.9375rem;
+}
+
+/* ── Console ──────────────────────────────────────────────────────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 8, 10, 0.72);
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  z-index: 20;
+  animation: fade 0.18s ease both;
+}
+
+.console-panel {
+  width: 100%;
+  max-width: 46rem;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.console-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.console-head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.console-sub {
+  margin: 0.4rem 0 0;
+  color: var(--faint);
+  font-size: 0.9375rem;
+  max-width: 34rem;
+}
+
+.console-body { overflow-y: auto; padding: 0.5rem 1.75rem 1.75rem; }
+
+.console-group-title {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.console-item {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.console-item:last-child { border-bottom: 0; }
+
+.console-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.console-item-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.console-why {
+  margin: 0.3rem 0 0.7rem;
+  color: var(--faint);
+  font-size: 0.9375rem;
+}
+
+.console-cmd-row { display: flex; gap: 0.6rem; align-items: stretch; }
+
+.console-cmd {
+  flex: 1;
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  color: var(--dim);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────────── */
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.65rem 1.25rem;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.9375rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: toast-in 0.2s ease both;
+  z-index: 30;
+}
+
+.toast.is-error { border-color: var(--danger); color: var(--danger); }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ── Narrow ───────────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { border-right: 0; border-bottom: 1px solid var(--line); max-height: 45vh; }
+  .detail-inner { padding: 1.5rem 1.25rem 3rem; }
+  .detail-head { flex-direction: column; gap: 1rem; }
+  .rotation-legend { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

@@ -1,0 +1,82 @@
+# Automated offsite backups — snapshots the Qdrant collections, the gateway's
+# encrypted DB, and the Letta agents; encrypts what isn't already encrypted;
+# uploads to Cloudflare R2 under <asset>/<date>/…; writes a manifest; and prunes
+# retention. Ships inside the ciphergate image (the `gateway-backup` bin).
+#
+# Run it on the gateway host: it must reach the
+# (llm-host: Qdrant) and Letta over the LAN, the gateway container locally
+# (the default BACKUP_GATEWAY_CMD does `docker exec ciphergate …`, so the
+# host's docker socket is mounted), and Cloudflare R2 for the offsite upload.
+#
+# Secrets are injected as env at deploy time — never committed. Read them from
+# the gateway with a scoped consumer:
+#   export BACKUP_ENCRYPTION_KEY=$(gateway secret get BACKUP_ENCRYPTION_KEY)
+#   export R2_ACCESS_KEY_ID=$(gateway secret get R2_ACCESS_KEY_ID)
+#   export R2_SECRET_ACCESS_KEY=$(gateway secret get R2_SECRET_ACCESS_KEY)
+#   export R2_ENDPOINT=$(gateway secret get R2_ENDPOINT)
+#   export R2_BUCKET=homelab-backups
+#   export BACKUP_LETTA_KEY=$(gateway secret get LETTA_API_KEY)
+#
+# Schedule: this compose runs a sleep-loop (one backup per BACKUP_EVERY seconds,
+# default daily). Prefer an n8n cron or host cron calling
+# `docker exec ciphergate-backup gateway-backup run` if you'd rather schedule
+# externally — then set command to a no-op or scale this to 0.
+#
+# Usage:
+#   docker compose -f docker-compose.backup.yml up -d
+services:
+  gateway-backup:
+    # No `build:` here, deliberately — see docker-compose.meta.yml. This variant
+    # shares `ciphergate:latest`, so `up --build` would retag the SHARED
+    # image from whatever source sits in this directory.
+    #
+    # Note also that `container_name: ciphergate-backup` collides with the
+    # backup sidecar in the main docker-compose.yml, which is a DIFFERENT image
+    # built from ./scripts/Dockerfile.backup. Bringing this file up replaces that
+    # running container. Use one or the other, knowingly.
+    image: ciphergate:latest
+    container_name: ciphergate-backup
+    restart: unless-stopped
+    # One backup per interval. `run` exits non-zero on any per-asset error; the
+    # loop logs and continues so a transient failure doesn't stop the schedule.
+    command:
+      - sh
+      - -c
+      - 'while true; do gateway-backup run || echo "[backup] run reported errors"; sleep "${BACKUP_EVERY:-86400}"; done'
+    environment:
+      # Sources
+      - BACKUP_QDRANT_URL=${BACKUP_QDRANT_URL:-http://vector-host:6333}
+      - BACKUP_QDRANT_API_KEY=${BACKUP_QDRANT_API_KEY:-}
+      - BACKUP_COLLECTIONS=${BACKUP_COLLECTIONS:-}
+      - BACKUP_LETTA_URL=${BACKUP_LETTA_URL:-http://llm-host:8283}
+      - BACKUP_LETTA_KEY=${BACKUP_LETTA_KEY:-}
+      # Offsite (Cloudflare R2) — all from the gateway
+      - R2_ENDPOINT=${R2_ENDPOINT:-}
+      - R2_BUCKET=${R2_BUCKET:-homelab-backups}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID:-}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY:-}
+      - R2_REGION=${R2_REGION:-auto}
+      # Encryption-at-rest for the Qdrant/Letta dumps
+      - BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY:-}
+      # Retention + state
+      - BACKUP_RETAIN_DAILY=${BACKUP_RETAIN_DAILY:-7}
+      - BACKUP_RETAIN_WEEKLY=${BACKUP_RETAIN_WEEKLY:-4}
+      - BACKUP_STATE=${BACKUP_STATE:-/data/backup-manifest.json}
+      # The gateway DB lives in the ciphergate container; default command
+      # execs into it via the mounted docker socket.
+      - BACKUP_GATEWAY_CMD=${BACKUP_GATEWAY_CMD:-}
+    volumes:
+      # Last-run manifest on a named volume.
+      - backup-state:/data
+      # Docker socket so the default gateway-backup command can `docker exec`
+      # into the ciphergate container to dump its DB. Read-only.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - homelab
+
+volumes:
+  backup-state:
+
+networks:
+  homelab:
+    external: true

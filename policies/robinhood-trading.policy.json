@@ -1,0 +1,36 @@
+{
+  "_comment": "Guard policy for the robinhood-trading MCP server. Allowlist model = default-deny: only the read/quote/history/review/scan tools below are exposed and callable; every order-placing or -cancelling tool (place_equity_order, place_option_order, cancel_equity_order, cancel_option_order) and every watchlist/scan mutation is denied by omission, and a new tool stays denied until added here. review_* are non-executing order previews, so they are allowed. redactPatterns scrub account numbers and any key/token from allowed responses.",
+  "allowTools": [
+    "get_accounts",
+    "get_portfolio",
+    "get_realized_pnl",
+    "get_equity_quotes",
+    "get_equity_historicals",
+    "get_equity_positions",
+    "get_equity_orders",
+    "get_equity_fundamentals",
+    "get_equity_tradability",
+    "get_option_quotes",
+    "get_option_chains",
+    "get_option_instruments",
+    "get_option_positions",
+    "get_option_orders",
+    "get_index_quotes",
+    "get_indexes",
+    "get_earnings_calendar",
+    "get_earnings_results",
+    "get_watchlists",
+    "get_watchlist_items",
+    "get_option_watchlist",
+    "get_popular_watchlists",
+    "get_scans",
+    "run_scan",
+    "search",
+    "review_equity_order",
+    "review_option_order"
+  ],
+  "redactPatterns": [
+    "(?i)\"(?:account[_-]?number|account[_-]?id|brokerage[_-]?account|account[_-]?url)\"\\s*:\\s*\"[^\"]*\"",
+    "(?i)\"(?:api[_-]?key|secret|token|bearer|password)\"\\s*:\\s*\"[^\"]*\""
+  ]
+}
