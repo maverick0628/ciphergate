@@ -184,7 +184,7 @@ it is the highest-value surface in the system.
 npm test
 ```
 
-500+ tests. They cover the encryption round-trip, consumer authorization, the
+469 tests. They cover the encryption round-trip, consumer authorization, the
 auth-bypass regression, the no-plaintext-in-any-response guarantee, and the
 partial-update property the UI depends on.
 
