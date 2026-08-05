@@ -36,6 +36,11 @@ There is no soft "warn-and-allow" tier for trades — omission is a hard block.
 (`warnArgPatterns` still exists for credential-shaped arguments, inherited from
 the engine defaults.)
 
+Denial happens twice, and the first one matters more. `tools/list` is filtered to
+the allowlist before the client ever sees it, so a denied tool is never advertised
+to the model — it cannot attempt what it is not shown. The call-time block is the
+backstop for a client that asks for a tool it was not offered.
+
 ## The policies
 
 Authored as standalone, reviewable files loaded by the existing policy engine:

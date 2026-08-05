@@ -36,6 +36,11 @@ allowlist, argument filtering, and response redaction. A trading server can be
 allowed to read quotes and denied the ability to place an order, and the denial is
 enforced at the wire, not by asking the model nicely.
 
+The allowlist filters `tools/list` as well, so a denied tool is never advertised
+to the model in the first place. It cannot attempt what it cannot see. The list is
+default-deny, so a tool the policy has never heard of stays blocked until someone
+adds it rather than allowed until someone notices.
+
 The browser UI is the other half of the idea. It can add and edit every secret in
 the store, and it **never displays one**. No endpoint behind it returns plaintext
 — the detail view shows `sk-l...c9ae` and nothing more — so a stolen session
