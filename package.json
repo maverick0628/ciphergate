@@ -31,7 +31,7 @@
     "argon2": "^0.44.0",
     "better-sqlite3": "^12.8.0",
     "commander": "^14.0.3",
-    "fastify": "^5.8.5"
+    "fastify": "^5.12.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
