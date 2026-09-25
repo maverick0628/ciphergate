@@ -5,6 +5,14 @@ Why things are the way they are. Newest first.
 Operational entries about the private deployment this was extracted from have
 been left out. What remains is the reasoning that shaped the code.
 
+## README screenshots come from a demo store
+
+The README shows the UI through real screenshots, taken from a throwaway
+database seeded with random demo values rather than from any live deployment.
+The detail view was picked because it shows the masked value, which is the
+UI's whole argument. The login screen was left out because the lockup
+already heads the README.
+
 ## The README states the real test count
 
 The Testing section claimed "500+ tests". `npm test` reports 469.
