@@ -48,6 +48,16 @@ yields metadata and eight characters. Editing tags or consumers cannot touch a
 stored value, because the write path is a genuine partial update rather than an
 upsert.
 
+![A secret's detail view: the stored value shows only as sk-d...fwRc, alongside its tags, consumers and rotation policy](docs/screenshots/ui-secret-detail.png)
+
+Anything that would print a credential lives in the console instead: copyable
+commands to run on the gateway host, where the output stays in a terminal you
+are watching.
+
+![The console overlay listing CLI commands for adding, revoking and rotating consumers](docs/screenshots/ui-console.png)
+
+Both screenshots come from a throwaway store seeded with demo values.
+
 ## Who it is for
 
 Someone running services on hardware they own — a homelab, a VPS, a single
