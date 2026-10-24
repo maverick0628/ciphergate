@@ -1,11 +1,12 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import { registerUiRoutes, type UiDeps } from './routes.js';
 import { resolveUiTls } from './tls.js';
 
 export type { UiDeps };
 
 export interface UiServerOptions extends UiDeps {
-  logger?: boolean;
+  /** A boolean, or Fastify logger options so a test can capture the output. */
+  logger?: FastifyServerOptions['logger'];
 }
 
 /**
@@ -61,6 +62,7 @@ export async function startUiServer(opts: StartUiServerOptions): Promise<Started
     storage: opts.storage,
     service: opts.service,
     secure,
+    ttls: opts.ttls,
   });
 
   await app.listen({ port: opts.port, host: opts.host });

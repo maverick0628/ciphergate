@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { createTestEnv } from './helpers.js';
+import { createTestEnv, DEFAULT_TTLS } from './helpers.js';
 import { SqliteStorage } from '../src/storage/sqlite.js';
 import { SecretCache } from '../src/core/cache.js';
 import { AuthManager } from '../src/core/auth.js';
@@ -32,7 +32,7 @@ async function createCtx() {
   auth.createConsumer('claude-code', 'reader');
   auth.createConsumer('some-service', 'reader');
 
-  const app = buildUiApp({ storage, service, secure: false });
+  const app = buildUiApp({ storage, service, secure: false, ttls: DEFAULT_TTLS });
 
   const loginRes = await app.inject({
     method: 'POST',

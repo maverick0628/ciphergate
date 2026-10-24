@@ -178,6 +178,18 @@ HTTP**, because its consumers are expected to be on a network you trust; if your
 are not, terminate TLS in front of it. The browser UI gets TLS by default because
 it is the highest-value surface in the system.
 
+UI sessions follow two independent rules, both configurable: a 12-hour absolute
+ceiling (`GATEWAY_UI_SESSION_TTL`, seconds) and a 60-minute idle timeout
+(`GATEWAY_UI_IDLE_TTL`, seconds). Both default to those values, and `0` turns a
+rule off. Turning them off trades a longer-lived cookie for fewer forced logins,
+which can be reasonable on a single-operator instance on a trusted network and
+is not for anything with more than one operator or wider exposure. A session
+keeps the ceiling it was issued with, so changing the setting does not extend
+sessions that already exist, and logout revokes immediately either way. The UI
+rechecks its session whenever the tab regains focus, and the server logs why it
+rejected a request (`no_cookie`, `unknown_token`, `expired` or `idle`) without
+logging the token.
+
 ## Documentation
 
 | Doc | What it covers |
@@ -199,7 +211,7 @@ it is the highest-value surface in the system.
 npm test
 ```
 
-469 tests. They cover the encryption round-trip, consumer authorization, the
+485 tests. They cover the encryption round-trip, consumer authorization, the
 auth-bypass regression, the no-plaintext-in-any-response guarantee, and the
 partial-update property the UI depends on.
 

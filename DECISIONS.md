@@ -5,6 +5,52 @@ Why things are the way they are. Newest first.
 Operational entries about the private deployment this was extracted from have
 been left out. What remains is the reasoning that shaped the code.
 
+## The UI rechecks its session on return and keeps an edit across a re-login
+
+A tab left idle looked logged in until Save returned a 401, and the login screen
+then discarded the form. The page only checked `/api/session` once, at load. It
+now rechecks when the tab becomes visible or regains focus (at most every 5
+seconds). A 401 while the app is open sets a resume flag, so the next login by
+the same user returns to the same detail pane with the form intact and a note to
+press Save again. A different user, or a 401 during the first load, starts clean.
+
+**A write is not replayed after the re-login.** Replaying would apply a rotation
+the operator had stopped watching, against a stored version that may have moved
+in the meantime. The cost is one extra click.
+
+**The auth gate logs why it rejected a request**, as `no_cookie`,
+`unknown_token`, `expired` or `idle`, via `inspectSession` (`verifySession` is a
+wrapper over it). The label is fixed text, never the token or the cookie header.
+`no_cookie` points at the browser not sending the cookie, `unknown_token` at the
+server not knowing the session, and the other two at a TTL rule. The UI logger
+is on unless `GATEWAY_LOG_LEVEL` is `error`, so the line only appears when it is
+not `error`.
+`buildUiApp` accepts Fastify logger options as well as a boolean so a test can
+capture the output.
+
+## UI session expiry is configurable, and the defaults did not move
+
+Both expiry rules were hard-coded: a 12-hour absolute ceiling and a 60-minute
+idle timeout. They are now `GATEWAY_UI_SESSION_TTL` and `GATEWAY_UI_IDLE_TTL`,
+where `0` disables that rule. Code defaults stay at 43200 and 3600, so the repo
+still ships the conservative policy and a secrets manager does not default to
+immortal sessions. A setting rather than new constants means changing the policy
+is a compose edit and a restart, not a rebuild.
+
+**Two things fell out of the implementation.** `expires_at` is NOT NULL and
+`deleteExpiredUiSessions` compares it as a string, so a never-expiring session
+stores a far-future sentinel (`9999-12-31T23:59:59.999Z`) rather than null. That
+also means it is never swept, and the table grows by a row per login, which is
+accepted at single-operator volume. And `verifySession` checks the stored
+`expires_at` rather than the current config, so changing the ceiling does not
+retroactively change sessions that already exist, in either direction. The idle
+timeout is different: it is read from the live setting, so changing
+`GATEWAY_UI_IDLE_TTL` and restarting applies to existing sessions too.
+
+**Cookie `Max-Age` caps at 400 days**, because browsers clamp there regardless.
+A never-expiring session therefore still means one login every 400 days when the
+cookie is dropped. The server-side row survives, so nothing is lost.
+
 ## README screenshots come from a demo store
 
 The README shows the UI through real screenshots, taken from a throwaway
