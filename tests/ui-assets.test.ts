@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
-import { createTestEnv } from './helpers.js';
+import { createTestEnv, DEFAULT_TTLS } from './helpers.js';
 import { SqliteStorage } from '../src/storage/sqlite.js';
 import { SecretCache } from '../src/core/cache.js';
 import { AuditLogger } from '../src/core/audit.js';
@@ -28,7 +28,7 @@ async function createCtx(configured = true) {
     new AuditLogger(storage, { enabled: false, appToken: '', userKey: '' }),
   );
   if (configured) await setUiPassword(storage, 'admin', PASSWORD);
-  return { app: buildUiApp({ storage, service, secure: false }), storage, env };
+  return { app: buildUiApp({ storage, service, secure: false, ttls: DEFAULT_TTLS }), storage, env };
 }
 
 describe('UI assets', () => {

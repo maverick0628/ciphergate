@@ -33,6 +33,10 @@ export interface GatewayConfig {
   uiHost: string;
   uiTlsCert: string | null;
   uiTlsKey: string | null;
+  /** Absolute UI session lifetime in seconds. 0 disables the ceiling. */
+  uiSessionTtl: number;
+  /** UI idle timeout in seconds. 0 disables the idle check. */
+  uiIdleTtl: number;
 }
 
 function envBool(name: string, defaultValue: boolean): boolean {
@@ -89,5 +93,9 @@ export function loadConfig(): GatewayConfig {
     uiHost: process.env.GATEWAY_UI_HOST ?? '0.0.0.0',
     uiTlsCert: process.env.GATEWAY_UI_TLS_CERT ?? null,
     uiTlsKey: process.env.GATEWAY_UI_TLS_KEY ?? null,
+    // Both default to the conservative values the UI shipped with. Set either
+    // to 0 to turn that expiry rule off — see README, "Browser UI".
+    uiSessionTtl: envInt('GATEWAY_UI_SESSION_TTL', 12 * 60 * 60),
+    uiIdleTtl: envInt('GATEWAY_UI_IDLE_TTL', 60 * 60),
   };
 }

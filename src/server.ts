@@ -90,6 +90,10 @@ async function main() {
         dataDir: dirname(config.dbPath),
         tlsCertPath: config.uiTlsCert,
         tlsKeyPath: config.uiTlsKey,
+        ttls: {
+          absoluteTtlMs: config.uiSessionTtl * 1000,
+          idleTtlMs: config.uiIdleTtl * 1000,
+        },
         logger: config.logLevel !== 'error',
       });
       uiApp = ui.app;

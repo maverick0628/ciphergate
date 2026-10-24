@@ -97,6 +97,13 @@ async function api(path, options = {}) {
   });
 
   if (res.status === 401) {
+    // Remember that the app was open, so a re-login can return to the same pane
+    // with any half-typed edit still in the form. Set only when the app is
+    // showing: a second 401 arriving while the login view is up must not undo it.
+    if (!$('app-view').hidden && state.started) {
+      state.resume = true;
+      state.resumeUser = $('session-user').textContent;
+    }
     showLogin('Session expired. Log in to continue.');
     throw new ApiError(401, { message: 'Session expired' });
   }
@@ -257,6 +264,12 @@ const state = {
   mode: 'view',
   search: '',
   tag: '',
+  /** True once start() has finished, so a 401 during first load is not treated as a resumable session. */
+  started: false,
+  /** True after a 401 while the app was open. Cleared by a fresh login or a logout. */
+  resume: false,
+  /** Who the dead session belonged to. Only that user gets the open form back. */
+  resumeUser: '',
 };
 
 const ROTATION_LABEL = {
@@ -791,12 +804,20 @@ function showError(line, message) {
 // ── Actions ─────────────────────────────────────────────────────────────────
 
 async function selectSecret(name) {
+  const previous = state.selected;
   state.selected = name;
   renderList();
   try {
     renderDetail(await api(`/api/secrets/${encodeURIComponent(name)}`));
   } catch (err) {
-    if (err.status !== 401) toast(err.message, true);
+    if (err.status === 401) {
+      // The pane still shows the previous secret, so keep the highlight on it
+      // for when the session is resumed.
+      state.selected = previous;
+      renderList();
+    } else {
+      toast(err.message, true);
+    }
   }
 }
 
@@ -895,7 +916,50 @@ async function start(user) {
   state.consumers = consumerData.consumers || [];
   await refresh();
   showEmpty();
+  state.started = true;
 }
+
+/**
+ * Come back after the session died under an open app. Reloads the lists but
+ * leaves the detail pane alone, so an edit typed before the 401 is still in the
+ * form. A write is never replayed: the stored version may have moved while the
+ * session was gone, so the operator presses Save again.
+ */
+async function resumeSession(user) {
+  const hadOpenForm = state.mode !== 'view';
+  state.resume = false;
+  showApp(user);
+  const consumerData = await api('/api/consumers');
+  state.consumers = consumerData.consumers || [];
+  await refresh();
+  toast(hadOpenForm ? 'Signed back in. Your edit is kept: press Save again.' : 'Signed back in.');
+}
+
+/**
+ * The page checks the session once, at load. A tab left open past the point the
+ * session died would otherwise look fine until the first write bounced. Ask
+ * again whenever the tab comes back into view; `api()` shows the login screen on
+ * a 401.
+ */
+let lastSessionCheck = 0;
+
+async function recheckSession() {
+  if ($('app-view').hidden) return;
+  const now = Date.now();
+  if (now - lastSessionCheck < 5000) return;
+  lastSessionCheck = now;
+  try {
+    await api('/api/session');
+  } catch {
+    // A 401 already switched to the login view. Anything else (gateway
+    // restarting, network gone) is not worth interrupting the operator for.
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') recheckSession();
+});
+window.addEventListener('focus', recheckSession);
 
 // ── Wiring ──────────────────────────────────────────────────────────────────
 
@@ -928,7 +992,16 @@ $('login-form').addEventListener('submit', async (event) => {
       return;
     }
 
-    await start((await res.json()).user);
+    const { user: loggedInUser } = await res.json();
+    if (state.resume && loggedInUser === state.resumeUser) {
+      await resumeSession(loggedInUser);
+    } else {
+      // A different user, or no open app to return to: start clean so nothing
+      // the previous session typed is shown to whoever logged in.
+      state.resume = false;
+      state.started = false;
+      await start(loggedInUser);
+    }
   } catch {
     err.textContent = 'Could not reach the gateway.';
     err.hidden = false;
@@ -940,6 +1013,7 @@ $('logout-btn').addEventListener('click', async () => {
   state.secrets = [];
   state.selected = null;
   state.detail = null;
+  state.resume = false;
   showLogin();
 });
 

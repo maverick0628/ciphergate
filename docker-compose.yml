@@ -17,6 +17,10 @@ services:
       - GATEWAY_CACHE_TTL=300
       - GATEWAY_UI_ENABLED=true
       - GATEWAY_UI_PORT=8405
+      # UI session lifetime, in seconds. These are the defaults; 0 turns a rule
+      # off. See README, "Security".
+      # - GATEWAY_UI_SESSION_TTL=43200
+      # - GATEWAY_UI_IDLE_TTL=3600
       # Pushover audit alerts — tokens injected as env at deploy time
       - GATEWAY_PUSHOVER_ENABLED=true
       - PUSHOVER_APP_TOKEN=${PUSHOVER_APP_TOKEN}

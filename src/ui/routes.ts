@@ -5,11 +5,12 @@ import { isLockedOut, recordFailure, clearFailures } from '../core/lockout.js';
 import { isUiConfigured, verifyUiPassword } from './credentials.js';
 import {
   createSession,
-  verifySession,
+  inspectSession,
   destroySession,
   buildCookie,
   clearCookie,
   parseCookie,
+  type SessionTtls,
 } from './session.js';
 import { getAsset, BOOTSTRAP_PAGE } from './assets.js';
 
@@ -30,6 +31,9 @@ export interface UiDeps {
   service: SecretsService;
   /** True when the listener is serving HTTPS. Drives the cookie's Secure flag. */
   secure: boolean;
+  /** Session lifetime. Required rather than defaulted, so a caller cannot
+   *  silently fall back to a different expiry policy than the operator set. */
+  ttls: SessionTtls;
 }
 
 declare module 'fastify' {
@@ -192,9 +196,9 @@ export function registerUiRoutes(app: FastifyInstance, deps: UiDeps): void {
     }
 
     clearFailures(UI_SCOPE, ip);
-    const token = createSession(storage, user);
+    const token = createSession(storage, user, deps.ttls);
     return reply
-      .header('set-cookie', buildCookie(token, deps.secure))
+      .header('set-cookie', buildCookie(token, deps.secure, deps.ttls.absoluteTtlMs))
       .send({ user });
   });
 
@@ -218,9 +222,11 @@ export function registerUiRoutes(app: FastifyInstance, deps: UiDeps): void {
   void app.register(async (api) => {
     api.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
       const token = parseCookie(request.headers.cookie);
-      const session = token ? verifySession(storage, token) : null;
+      const session = inspectSession(storage, token, deps.ttls);
 
-      if (!session) {
+      if (!session.ok) {
+        // The reason is a fixed label, never the token or the cookie header.
+        request.log.info({ reason: session.reason, route: request.routeOptions.url }, 'ui session rejected');
         return reply.status(401).send({ error: 'unauthorized', message: 'Log in to continue' });
       }
 

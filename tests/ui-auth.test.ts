@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
-import { createTestEnv } from './helpers.js';
+import { createTestEnv, DEFAULT_TTLS } from './helpers.js';
 import { SqliteStorage } from '../src/storage/sqlite.js';
 import { SecretCache } from '../src/core/cache.js';
 import { AuditLogger } from '../src/core/audit.js';
@@ -10,11 +10,18 @@ import { deriveKey } from '../src/storage/crypto.js';
 import { resetLockoutState } from '../src/core/lockout.js';
 import { buildUiApp } from '../src/ui/server.js';
 import { setUiPassword } from '../src/ui/credentials.js';
-import { SESSION_COOKIE } from '../src/ui/session.js';
+import { SESSION_COOKIE, type SessionTtls } from '../src/ui/session.js';
 
 const PASSWORD = 'a-sufficiently-long-password';
 
-async function createUiTestApp(opts: { configured?: boolean; secure?: boolean } = {}) {
+async function createUiTestApp(
+  opts: {
+    configured?: boolean;
+    secure?: boolean;
+    ttls?: SessionTtls;
+    logStream?: { write(line: string): void };
+  } = {},
+) {
   const env = createTestEnv();
   const storage = new SqliteStorage(env.dbPath);
   const salt = randomBytes(16);
@@ -28,7 +35,13 @@ async function createUiTestApp(opts: { configured?: boolean; secure?: boolean } 
     await setUiPassword(storage, 'admin', PASSWORD);
   }
 
-  const app = buildUiApp({ storage, service, secure: opts.secure ?? false });
+  const app = buildUiApp({
+    storage,
+    service,
+    secure: opts.secure ?? false,
+    ttls: opts.ttls ?? DEFAULT_TTLS,
+    ...(opts.logStream ? { logger: { level: 'info', stream: opts.logStream } } : {}),
+  });
   return { app, storage, service, env };
 }
 
@@ -180,6 +193,26 @@ describe('UI auth', () => {
       expect(res.statusCode).toBe(401);
     });
 
+    it('logs why the gate rejected a request, without the token', async () => {
+      await ctx.app.close();
+      ctx.env.cleanup();
+      const lines: string[] = [];
+      ctx = await createUiTestApp({ logStream: { write: line => void lines.push(line) } });
+
+      await ctx.app.inject({ method: 'GET', url: '/api/session' });
+      await ctx.app.inject({
+        method: 'GET',
+        url: '/api/session',
+        headers: { cookie: `${SESSION_COOKIE}=secret-looking-forged-token` },
+      });
+
+      const rejections = lines
+        .map(line => JSON.parse(line) as { msg?: string; reason?: string })
+        .filter(entry => entry.msg === 'ui session rejected');
+      expect(rejections.map(entry => entry.reason)).toEqual(['no_cookie', 'unknown_token']);
+      expect(lines.join('')).not.toContain('secret-looking-forged-token');
+    });
+
     it('logout invalidates the session', async () => {
       const token = await login(ctx.app);
       const out = await ctx.app.inject({
@@ -313,6 +346,49 @@ describe('UI auth', () => {
       });
       const raw = String(res.headers['set-cookie']);
       expect(raw).toContain('Secure');
+    });
+  });
+
+  // The session module is unit-tested directly; these cover the wiring, so a
+  // TTL that never reaches the auth gate cannot pass silently.
+  describe('with expiry disabled', () => {
+    const NEVER: SessionTtls = { absoluteTtlMs: 0, idleTtlMs: 0 };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('still serves a gated route a year after login', async () => {
+      ctx = await createUiTestApp({ ttls: NEVER });
+      const token = await login(ctx.app);
+
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000));
+
+      const res = await ctx.app.inject({
+        method: 'GET',
+        url: '/api/secrets',
+        headers: { cookie: `${SESSION_COOKIE}=${token}` },
+      });
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('logout still revokes immediately', async () => {
+      ctx = await createUiTestApp({ ttls: NEVER });
+      const token = await login(ctx.app);
+
+      await ctx.app.inject({
+        method: 'POST',
+        url: '/logout',
+        headers: { cookie: `${SESSION_COOKIE}=${token}` },
+      });
+
+      const res = await ctx.app.inject({
+        method: 'GET',
+        url: '/api/secrets',
+        headers: { cookie: `${SESSION_COOKIE}=${token}` },
+      });
+      expect(res.statusCode).toBe(401);
     });
   });
 });
