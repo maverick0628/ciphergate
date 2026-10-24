@@ -23,7 +23,8 @@ in the meantime. The cost is one extra click.
 wrapper over it). The label is fixed text, never the token or the cookie header.
 `no_cookie` points at the browser not sending the cookie, `unknown_token` at the
 server not knowing the session, and the other two at a TTL rule. The UI logger
-follows `GATEWAY_LOG_LEVEL`, so the line only appears when it is not `error`.
+is on unless `GATEWAY_LOG_LEVEL` is `error`, so the line only appears when it is
+not `error`.
 `buildUiApp` accepts Fastify logger options as well as a boolean so a test can
 capture the output.
 
@@ -41,8 +42,10 @@ is a compose edit and a restart, not a rebuild.
 stores a far-future sentinel (`9999-12-31T23:59:59.999Z`) rather than null. That
 also means it is never swept, and the table grows by a row per login, which is
 accepted at single-operator volume. And `verifySession` checks the stored
-`expires_at` rather than the current config, so changing the setting does not
-retroactively change sessions that already exist, in either direction.
+`expires_at` rather than the current config, so changing the ceiling does not
+retroactively change sessions that already exist, in either direction. The idle
+timeout is different: it is read from the live setting, so changing
+`GATEWAY_UI_IDLE_TTL` and restarting applies to existing sessions too.
 
 **Cookie `Max-Age` caps at 400 days**, because browsers clamp there regardless.
 A never-expiring session therefore still means one login every 400 days when the
