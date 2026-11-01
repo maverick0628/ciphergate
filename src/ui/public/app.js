@@ -347,11 +347,11 @@ function renderList() {
           class: `secret-item${state.selected === secret.name ? ' is-active' : ''}`,
           attrs: { tabindex: '0', role: 'button' },
           on: {
-            click: () => selectSecret(secret.name),
+            click: () => selectSecret(secret.name).then(revealDetail),
             keydown: (e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                selectSecret(secret.name);
+                selectSecret(secret.name).then(revealDetail);
               }
             },
           },
@@ -803,6 +803,13 @@ function showError(line, message) {
 
 // ── Actions ─────────────────────────────────────────────────────────────────
 
+// Stacked layout: the detail pane sits below the list, so bring it into view.
+function revealDetail() {
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    $('detail').scrollIntoView({ block: 'start' });
+  }
+}
+
 async function selectSecret(name) {
   const previous = state.selected;
   state.selected = name;
@@ -1017,7 +1024,7 @@ $('logout-btn').addEventListener('click', async () => {
   showLogin();
 });
 
-$('new-btn').addEventListener('click', () => renderNew());
+$('new-btn').addEventListener('click', () => { renderNew(); revealDetail(); });
 $('console-btn').addEventListener('click', () => openConsole());
 $('console-close').addEventListener('click', () => closeConsole());
 
