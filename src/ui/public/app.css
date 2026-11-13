@@ -760,7 +760,7 @@ input[type="search"] { -webkit-appearance: none; }
 
 @media (max-width: 900px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
-  .sidebar { border-right: 0; border-bottom: 1px solid var(--line); max-height: 45vh; max-height: 45dvh; }
+  .sidebar { border-right: 0; border-bottom: 1px solid var(--line); max-height: 45vh; }
   /* The list scrolls inside a scrolling page: stop its end from dragging the page. */
   .secret-list { overscroll-behavior: contain; }
   /* iOS zooms the page on focus for any input under 16px. */

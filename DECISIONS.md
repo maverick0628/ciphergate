@@ -7,7 +7,7 @@ been left out. What remains is the reasoning that shaped the code.
 
 ## iOS layout fixes keep the stacked list
 
-On a phone the list still scrolls inside a scrolling page. A list/detail toggle would remove that, but it is a new navigation model, so this change only stops the list's end from dragging the page (`overscroll-behavior: contain`). Viewport heights use `dvh` with a `vh` fallback so iOS's address bar no longer hides the bottom edge, and mono inputs are 16px on the stacked layout because iOS zooms the page on focus for anything smaller. Checked by computed style at 375px in Chromium, not on an iPhone.
+On a phone the list still scrolls inside a scrolling page. A list/detail toggle would remove that, but it is a new navigation model, so this change only stops the list's end from dragging the page (`overscroll-behavior: contain`). Full-height views and the console use `dvh` with a `vh` fallback so iOS's address bar no longer hides the bottom edge (the stacked sidebar stays on `vh`, since an in-flow `dvh` height would resize as the toolbar collapses), and mono inputs are 16px on the stacked layout because iOS zooms the page on focus for anything smaller. Checked by computed style at 375px in Chromium, not on an iPhone.
 
 ## The UI rechecks its session on return and keeps an edit across a re-login
 
