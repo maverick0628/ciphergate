@@ -10,6 +10,13 @@ function isValidSecretName(name: string): boolean {
   return SECRET_NAME_REGEX.test(name);
 }
 
+function isValidConsumers(consumers: unknown): consumers is string[] | undefined {
+  // Match browser writes: a stored string would turn authorization into substring matching.
+  return consumers === undefined || (
+    Array.isArray(consumers) && consumers.every(value => typeof value === 'string' && value.trim() !== '')
+  );
+}
+
 export function registerRoutes(
   app: FastifyInstance,
   service: SecretsService,
@@ -91,7 +98,7 @@ export function registerRoutes(
       name: string;
       value: string;
       description?: string;
-      consumers: string[];
+      consumers?: unknown;
       tags: string[];
       rotation_days?: number;
     };
@@ -106,6 +113,9 @@ export function registerRoutes(
       }
       if (!isValidSecretName(name)) {
         return reply.status(400).send({ error: 'bad_request', message: 'name must match /^[A-Z][A-Z0-9_]{0,127}$/' });
+      }
+      if (!isValidConsumers(consumers)) {
+        return reply.status(400).send({ error: 'bad_request', message: 'consumers must be an array of non-empty strings' });
       }
       try {
         const result = service.createSecret(
@@ -127,7 +137,7 @@ export function registerRoutes(
 
   app.put<{
     Params: { name: string };
-    Body: { value?: string; description?: string; consumers?: string[]; tags?: string[]; rotation_days?: number };
+    Body: { value?: string; description?: string; consumers?: unknown; tags?: string[]; rotation_days?: number };
   }>(
     '/v1/secret/:name',
     async (request, reply) => {
@@ -138,6 +148,9 @@ export function registerRoutes(
         return reply.status(400).send({ error: 'bad_request', message: 'name must match /^[A-Z][A-Z0-9_]{0,127}$/' });
       }
       const { value, description, consumers, tags, rotation_days } = request.body ?? {};
+      if (!isValidConsumers(consumers)) {
+        return reply.status(400).send({ error: 'bad_request', message: 'consumers must be an array of non-empty strings' });
+      }
       const result = service.updateSecret(name, { value, description, consumers, tags, rotation_days }, consumer.name, request.ip ?? 'unknown');
       return reply.send(result);
     },

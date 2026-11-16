@@ -5,6 +5,10 @@ Why things are the way they are. Newest first.
 Operational entries about the private deployment this was extracted from have
 been left out. What remains is the reasoning that shaped the code.
 
+## 2026-11-16 — Match REST consumer validation to the browser
+
+Validate supplied consumer lists on both REST secret write methods before storage. Omitting the field preserves the existing create and partial-update defaults. Use a dedicated linked worktree because the managed checkout did not return during setup. Retain the verified commit locally until the coordinated release is approved.
+
 ## iOS layout fixes keep the stacked list
 
 On a phone the list still scrolls inside a scrolling page. A list/detail toggle would remove that, but it is a new navigation model, so this change only stops the list's end from dragging the page (`overscroll-behavior: contain`). Full-height views and the console use `dvh` with a `vh` fallback so iOS's address bar no longer hides the bottom edge (the stacked sidebar stays on `vh`, since an in-flow `dvh` height would resize as the toolbar collapses), and mono inputs are 16px on the stacked layout because iOS zooms the page on focus for anything smaller. Checked by computed style at 375px in Chromium, not on an iPhone.

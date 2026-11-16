@@ -84,6 +84,106 @@ describe('REST API', () => {
 
   // ── Secret CRUD ───────────────────────────────────────────────────────────
 
+  describe.each(['POST', 'PUT'] as const)('%s consumers validation', (method) => {
+    it.each([
+      { label: 'string', consumers: 'reader-extra' },
+      { label: 'null', consumers: null },
+      { label: 'number', consumers: 42 },
+      { label: 'boolean', consumers: false },
+      { label: 'object', consumers: { reader: true } },
+      { label: 'non-string entry', consumers: ['reader', 42] },
+      { label: 'null entry', consumers: [null] },
+      { label: 'nested array', consumers: [['reader']] },
+      { label: 'empty entry', consumers: [''] },
+      { label: 'whitespace entry', consumers: [' \t'] },
+    ])('rejects $label without storing the write or exposing its value', async ({ consumers }) => {
+      const name = 'VALIDATE_CONSUMERS';
+      if (method === 'PUT') {
+        ctx.service.createSecret({ name, value: 'synthetic-original', consumers: ['other'], tags: [] }, 'admin', 'test');
+      }
+      const before = ctx.storage.getSecret(name);
+      const history = ctx.storage.getSecretHistory(name);
+      const value = 'synthetic-rejected-secret-value';
+      const res = await ctx.app.inject({
+        method,
+        url: method === 'POST' ? '/v1/secret' : `/v1/secret/${name}`,
+        headers: { authorization: `Bearer ${ctx.adminKey}` },
+        payload: { name, value, consumers },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json()).toEqual({ error: 'bad_request', message: 'consumers must be an array of non-empty strings' });
+      expect(res.body).not.toContain(value);
+      expect(res.body).not.toContain('reader-extra');
+      expect(ctx.storage.getSecret(name)).toEqual(before);
+      expect(ctx.storage.getSecretHistory(name)).toEqual(history);
+    });
+
+    it.each([
+      { label: 'omitted', consumers: undefined },
+      { label: 'empty array', consumers: [] },
+      { label: 'string array', consumers: ['reader', 'other'] },
+      { label: 'similar consumer name', consumers: ['reader-extra'] },
+      { label: 'untrimmed name', consumers: [' reader '] },
+    ])('preserves $label and metadata-only update semantics', async ({ consumers }) => {
+      const name = 'VALID_CONSUMERS';
+      const value = 'synthetic-current-secret-value';
+      if (method === 'PUT') {
+        ctx.service.createSecret({ name, value: 'synthetic-old-value', consumers: ['reader'], tags: [] }, 'admin', 'test');
+        ctx.service.updateSecret(name, { value }, 'admin', 'test');
+      }
+      const before = ctx.storage.getSecret(name);
+      const history = ctx.storage.getSecretHistory(name);
+      const res = await ctx.app.inject({
+        method,
+        url: method === 'POST' ? '/v1/secret' : `/v1/secret/${name}`,
+        headers: { authorization: `Bearer ${ctx.adminKey}` },
+        payload: { name, ...(method === 'POST' ? { value } : {}), consumers, description: 'edited' },
+      });
+
+      expect(res.statusCode).toBe(method === 'POST' ? 201 : 200);
+      const after = ctx.storage.getSecret(name)!;
+      const expectedConsumers = consumers ?? (method === 'POST' ? [] : ['reader']);
+      expect(after.consumers).toEqual(expectedConsumers);
+      expect(after.description).toBe('edited');
+      if (before) {
+        expect(after.value_enc).toEqual(before.value_enc);
+        expect(after.iv).toEqual(before.iv);
+        expect(after.auth_tag).toEqual(before.auth_tag);
+        expect(after.version).toBe(before.version);
+        expect(ctx.storage.getSecretHistory(name)).toEqual(history);
+      }
+
+      const read = await ctx.app.inject({
+        method: 'GET', url: `/v1/secret/${name}`,
+        headers: { authorization: `Bearer ${ctx.adminKey}` },
+      });
+      expect(read.statusCode).toBe(200);
+      expect(read.json().value).toBe(value);
+      const reader = await ctx.app.inject({
+        method: 'GET', url: `/v1/secret/${name}`,
+        headers: { authorization: `Bearer ${ctx.readerKey}` },
+      });
+      expect(reader.statusCode).toBe(expectedConsumers.includes('reader') ? 200 : 403);
+    });
+
+    it.each(['anonymous', 'reader'] as const)('retains authorization for %s writes', async (actor) => {
+      const name = 'PROTECTED_CONSUMERS';
+      if (method === 'PUT') {
+        ctx.service.createSecret({ name, value: 'synthetic-original', consumers: [], tags: [] }, 'admin', 'test');
+      }
+      const before = ctx.storage.getSecret(name);
+      const res = await ctx.app.inject({
+        method,
+        url: method === 'POST' ? '/v1/secret' : `/v1/secret/${name}`,
+        headers: actor === 'reader' ? { authorization: `Bearer ${ctx.readerKey}` } : {},
+        payload: { name, value: 'synthetic-unauthorized-value', consumers: 'reader-extra' },
+      });
+      expect(res.statusCode).toBe(actor === 'reader' ? 403 : 401);
+      expect(ctx.storage.getSecret(name)).toEqual(before);
+    });
+  });
+
   it('POST /v1/secret — admin creates a secret (201)', async () => {
     const res = await ctx.app.inject({
       method: 'POST',
