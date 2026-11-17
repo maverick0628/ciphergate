@@ -1,6 +1,6 @@
 {
   "name": "ciphergate",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Encrypted secret storage with a unified REST, CLI and MCP surface, and a policy-enforcing proxy for AI agents",
   "type": "module",
   "main": "dist/server.js",
